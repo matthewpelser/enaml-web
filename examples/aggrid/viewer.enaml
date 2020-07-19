@@ -1,0 +1,121 @@
+import json
+import pandas as pd
+from web.core.api import Looper, Conditional
+from web.components.api import *
+
+class GridEvents(Div):
+    onSelectionChanged = d_(Event())
+    # Hack way of publishing trigger events out;
+    def selectAll(self):
+        change = {
+            'id': self.id,
+            'type': 'trigger',
+            'name': 'selectAll',
+            'value': 'some data',
+        }
+        super(GridEvents, self)._notify_modified(change)
+    def setRowData(self, data):
+        change = {
+            'id': self.id,
+            'type': 'trigger',
+            'name': 'setRowData',
+            'value': [data],
+        }
+        super(GridEvents, self)._notify_modified(change)
+
+enamldef AgGrid(GridEvents):
+    tag = 'div'
+    cls = 'mygrid ag-theme-alpine'
+    style = 'height: 200px'
+    onSelectionChanged ::
+        print(change['value'])
+    attr rowData: list = []
+    attr columnDefs: list = [
+        { 'headerName': 'Make', 'field': 'make'},
+        { 'headerName': 'Model', 'field': 'model'},
+        { 'headerName': 'Price', 'field': 'price'}
+    ]
+    attrs << {
+        'data-columndefs': json.dumps(columnDefs),
+        'data-rowdata': json.dumps(rowData),
+    }
+
+enamldef Viewer(Html): viewer:
+    attr request # The tornado request
+    attr response # The tornado response handler
+    attr csv_files # Files in the repo
+    attr dataframe
+    attr loading = False
+    Head:
+        Title:
+            text = "AgGrid Binding"
+        Script:
+            src = 'https://code.jquery.com/jquery-3.3.1.min.js'
+            type = 'text/javascript'
+        Script:
+            src = 'https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.noStyle.js'
+            type = 'text/javascript'
+        Script:
+            src = '/static/app.js'
+            type = 'text/javascript'
+        Script:
+            text = '''
+            $(document).ready(function(){
+                initViewer('%s');
+            });
+            '''% viewer.id
+
+        Link:
+            rel="stylesheet"
+            href="//stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+            attrs = dict(
+                integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS",
+                crossorigin="anonymous"
+            )
+        Link:
+            rel="stylesheet"
+            href="https://unpkg.com/ag-grid-community/dist/styles/ag-grid.css"
+        Link:
+            rel="stylesheet"
+            href="https://unpkg.com/ag-grid-community/dist/styles/ag-theme-alpine.css"
+    Body:
+        cls = 'container'
+        H1:
+            text = 'AgGrid Binding'
+        P:
+            text = 'This example demonstrates an interactive web app built with enaml'
+        Div:
+            Div:
+                Button:
+                    text = "Ag Select All Rows"
+                    cls = 'btn btn-info'
+                    clickable = True
+                    clicked ::
+                        grid.selectAll()
+
+                Button:
+                    text = "Ag Update Data"
+                    cls = 'btn btn-info'
+                    clickable = True
+                    clicked ::
+                        grid.setRowData([
+                        { 'make': 'VVV', 'model': 'Celica', 'price': 35000},
+                    ])
+            Div:
+                AgGrid: grid:
+                    rowData << [
+                        { 'make': 'Toyota', 'model': 'Celica', 'price': 35000},
+                        { 'make': 'Ford', 'model': 'Mondeo', 'price': 32000},
+                        { 'make': 'Porsche', 'model': 'Boxter', 'price': 72000}
+                    ]
+                    onSelectionChanged :: 
+                        detail.text = str(change['value'])
+                Div:
+                    cls = 'card'
+                    Div:
+                        cls = 'card-header'
+                        text = "Select grid row"
+                    Div: detail:
+                        cls = 'card-body'
+                        text = ""
+                    
