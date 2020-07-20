@@ -1,3 +1,7 @@
+$(document).ready(function(){
+    initViewer(window.VIEWERID);
+});
+
 function initViewer(ref) {
     var ws = new WebSocket("ws://localhost:8888/websocket/?ref="+ref);
     ws.onopen = function(evt) {

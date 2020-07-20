@@ -1,0 +1,64 @@
+from web.components.api import *
+from web.core.api import Block, Looper
+from materialize.page import MaterializePage
+from materialize.components import Row, Col
+from materialize.fields import TextField, CheckboxField, SelectField, DatePickerField
+
+
+enamldef Detail(Div):
+    attr result = None
+    Div:
+        cls = "card-panel teal"
+        TextField: field1:
+            input.name = 'field1_name'
+            label.text = "field 1"
+        CheckboxField: checkbox1:
+            value = False
+        DatePickerField: d1:
+            input.name = 'df'
+        Button:
+            cls = "btn"
+            clickable = True
+            text = "Go"
+            clicked ::
+                result.text = f' {field1.value} {checkbox1.value} {d1.value}'
+
+enamldef Result(Div): result:
+    Div:
+        cls = "card-panel green"
+        text << result.text
+    
+
+enamldef Viewer(MaterializePage): viewer:
+    attr request
+    attr response
+    attr s = viewer.document_ready_script
+    stylesheets = [
+    ]
+    scripts = [
+        '/static/app.js'
+    ]
+    Block:
+        block = parent.header
+        Script:
+            text = f'window.VIEWERID=\'{viewer.id}\';'         
+    Block:
+        block = parent.content
+        Row:
+            Col:
+                size = 's6'
+                Detail: detail1:
+                    cls = ""
+                    result = result1
+            Col:
+                size = 's6'
+                Detail: detail2:
+                    cls = ""
+                    result = result1
+        Row:
+            Col:
+                size = 's12'
+                Result: result1:
+                    cls = ""
+    Block:
+        block = parent.footer
