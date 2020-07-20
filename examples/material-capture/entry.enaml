@@ -1,8 +1,13 @@
+import time
 from web.components.api import *
-from web.core.api import Block, Looper
+from web.core.api import Block, Looper, Conditional
 from materialize.page import MaterializePage
 from materialize.components import Row, Col
 from materialize.fields import TextField, CheckboxField, SelectField, DatePickerField
+
+def loadsomething(id):
+    time.sleep(3)
+    return '1000'
 
 
 enamldef Detail(Div):
@@ -22,11 +27,26 @@ enamldef Detail(Div):
             text = "Go"
             clicked ::
                 result.text = f' {field1.value} {checkbox1.value} {d1.value}'
+                result.calculated = ""
+                result.loading = True
+                result.calculated = loadsomething(field1.value)
+                result.loading = False
 
 enamldef Result(Div): result:
+    attr calculated = ""
+    attr loading = False
     Div:
         cls = "card-panel green"
-        text << result.text
+        Conditional:
+            condition << result.loading
+            Div:
+                cls = 'progress'
+                Div:
+                    cls = 'indeterminate'
+        Div: textdiv:
+            text << result.text
+        Div: calcdiv:
+            text << result.calculated
     
 
 enamldef Viewer(MaterializePage): viewer:

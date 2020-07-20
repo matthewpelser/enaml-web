@@ -1,3 +1,5 @@
+// The material template does not let you generate this 
+// ready bootstrap so setting window global to work around this
 $(document).ready(function(){
     initViewer(window.VIEWERID);
 });
