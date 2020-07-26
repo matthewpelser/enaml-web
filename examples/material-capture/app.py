@@ -45,17 +45,25 @@ class ViewerHandler(tornado.web.RequestHandler):
 
     def get(self):
         model = EntryModel()
-        viewer = Viewer(
-            request=self.request,
-            response=self,
-            model=model
-        )
+        id = self.get_argument("id", None, True)
+        if id is None:
+            viewer = Viewer(
+                request=self.request,
+                response=self,
+                model=model
+            )
 
-        # Store the viewer in the cache
-        CACHE[viewer.id] = viewer
+            # Store the viewer in the cache
+            CACHE[viewer.id] = viewer
+        else:
+            viewer = CACHE[id]
 
         self.write(viewer.render())
 
+class AdminViewerHandler(tornado.web.RequestHandler):
+
+    def get(self):
+        self.write(json.dumps(list(CACHE)))
 
 class ViewerWebSocket(tornado.websocket.WebSocketHandler):
     viewer = None
@@ -127,6 +135,7 @@ def run():
     # Start the tornado app
     app = tornado.web.Application([
         (r'/', ViewerHandler),
+        (r'/admin', AdminViewerHandler),
         (r'/websocket/', ViewerWebSocket),
         (r'/static/(.*)', tornado.web.StaticFileHandler, {
             'path': os.path.dirname(__file__)}),
