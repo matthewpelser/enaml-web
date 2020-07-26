@@ -1,61 +1,171 @@
 import time
+import json
 from web.components.api import *
 from web.core.api import Block, Looper, Conditional
 from materialize.page import MaterializePage
-from materialize.components import Row, Col
+from materialize.components import Row, Col, FlatButton
 from materialize.fields import TextField, CheckboxField, SelectField, DatePickerField
+
+class EntryModel(Atom):
+    param1 = Unicode()
+    param2 = Unicode()
+    param3 = Unicode()
+
+    result = Unicode()
+
+    def doSomethingAndSetSomething(self, foo):
+        self.param2 = '99'
+
+    @observe('param1', 'param2', 'param3')
+    def some_param_changed(self, change):
+        self.result = json.dumps([
+            {
+                'x': [1, 2, 3, int(change['value'])],
+                'y': [10, 15, 13, 17],
+                'type': 'scatter'
+            },
+        ])
+
+    def _default_param1(self):
+        return '33'
+
+    def _default_param2(self):
+        return '66'
+
+    def _default_param3(self):
+        return '10'
 
 def loadsomething(id):
     time.sleep(3)
     return '1000'
 
+enamldef Slider(P): slider:
+    attr min
+    attr max
+    alias value: range.value
+    cls = 'range-field'
+    Input: range:
+        type = 'range'
+        
+enamldef Model1(Div): m:
+    attr chart
+    attr model
+    Div:
+        Slider: s1:
+            min = 0
+            max = 100
+            value := model.param1
 
-enamldef Detail(Div):
-    attr result = None
+enamldef Model2(Div):
+    attr chart
+    attr model
+    Div:
+        Slider: s1:
+            min = 0
+            max = 100
+            value := model.param1
+    Div:
+        Slider: s2:
+            min = 0
+            max = 100
+            value := model.param2
+    Div:
+        FlatButton: 
+            text = 'Set'
+            clickable = True
+            clicked ::
+                model.doSomethingAndSetSomething('hello')
+
+enamldef Model3(Div):
+    attr chart
+    attr model
+    Div:
+        Slider: s1:
+            min = 0
+            max = 100
+            value := model.param1
+    Div:
+        Slider: s2:
+            min = 0
+            max = 100
+            value := model.param2
+    Div:
+        Slider: s3:
+            min = 0
+            max = 100
+            value := model.param3
+    Div:
+        cls = ""
+        TextField: t1:
+            text = ''
+
+enamldef Selector(Div): selector:
+    attr model
+    attr chart
+    attr selectedType
     Div:
         cls = "card-panel teal"
-        TextField: field1:
-            input.name = 'field1_name'
-            label.text = "field 1"
-        CheckboxField: checkbox1:
-            value = False
-        DatePickerField: d1:
-            input.name = 'df'
-        Button:
-            cls = "btn"
-            clickable = True
-            text = "Go"
-            clicked ::
-                result.text = f' {field1.value} {checkbox1.value} {d1.value}'
-                result.calculated = ""
-                result.loading = True
-                result.calculated = loadsomething(field1.value)
-                result.loading = False
-
-enamldef Result(Div): result:
-    attr calculated = ""
-    attr loading = False
-    Div:
-        cls = "card-panel green"
+        SelectField: modelSelector:
+           options = ['model1', 'model2', 'model3']
+           value = 'model1'
         Conditional:
-            condition << result.loading
-            Div:
-                cls = 'progress'
-                Div:
-                    cls = 'indeterminate'
-        Div: textdiv:
-            text << result.text
-        Div: calcdiv:
-            text << result.calculated
+            condition << modelSelector.value == 'model1'
+            Model1: m1:
+                chart = selector.chart
+                model = selector.model
+        Conditional:
+            condition << modelSelector.value == 'model2'
+            Model2: m2:
+                chart = selector.chart
+                model = selector.model
+        Conditional:
+            condition << modelSelector.value == 'model3'
+            Model3: m3:
+                chart = selector.chart
+                model = selector.model
+        Div: debug:
+            text << selector.model.result
+"""
+            text :: 
+                print('g')
+                chart.redraw(json.dumps(change['value']))
+"""
+
+class PlotyEvents(Div):
+    updatetraces = d_(Unicode())
+
+    @observe('updatetraces')
+    def handleupdate(self, change):
+        self.redraw(self.updatetraces)
+
+    def redraw(self, value):
+        change = {
+            'id': self.id,
+            'type': 'trigger',
+            'name': 'redraw',
+            'value': value,
+        }
+        super(PlotyEvents, self)._notify_modified(change)
     
+enamldef PlotlyChart(PlotyEvents):
+    tag = 'div'
+    cls = 'plotly-chart'
+    attr traces: list = []
+    attr layout: dict = {}
+    attrs << {
+        'data-traces': json.dumps(traces),
+        'data-layout': json.dumps(layout),
+    } 
 
 enamldef Viewer(MaterializePage): viewer:
+    attr model
     attr request
     attr response
     attr s = viewer.document_ready_script
     stylesheets = [
     ]
     scripts = [
+        "https://cdn.plot.ly/plotly-latest.min.js",
         '/static/app.js'
     ]
     Block:
@@ -66,19 +176,32 @@ enamldef Viewer(MaterializePage): viewer:
         block = parent.content
         Row:
             Col:
-                size = 's6'
-                Detail: detail1:
+                size = 's12'
+                Div: menu:
                     cls = ""
-                    result = result1
-            Col:
-                size = 's6'
-                Detail: detail2:
-                    cls = ""
-                    result = result1
         Row:
             Col:
-                size = 's12'
-                Result: result1:
-                    cls = ""
+                size = 's6'
+                Selector: selector:
+                    chart = plotyChart
+                    model = viewer.model
+
+            Col:
+                size = 's6'
+                PlotlyChart: plotyChart:
+                    updatetraces << viewer.model.result
+                    traces << [
+                        {
+                            'x': [1, 2, 3, 4],
+                            'y': [10, 15, 13, 17],
+                            'type': 'scatter'
+                        },
+                        {
+                            'x': [1, 2, 3, 4],
+                            'y': [16, 5, 11, 9],
+                            'type': 'scatter'
+                        }
+                    ]
+
     Block:
         block = parent.footer

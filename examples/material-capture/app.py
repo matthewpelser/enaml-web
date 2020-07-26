@@ -7,9 +7,11 @@ import tornado.websocket
 import tornado.ioloop
 from tornado.log import enable_pretty_logging
 from web.core.app import WebApplication
+import json
+from atom.api import Atom, Unicode, Range, Int, Dict, Bool, observe
 
 with enaml.imports():
-    from entry import Viewer
+    from entry import Viewer, EntryModel
 
 log = tornado.web.app_log
 
@@ -36,12 +38,17 @@ CSV_FILES = ['{}/{}.csv'.format(BASE_URL, name) for name in (
 # Holds the rendered view so a websocket can retrieve it later
 CACHE = {}
 
+import json
+from atom.api import Atom, Unicode, Range, Int, Dict, Bool, observe
+
 class ViewerHandler(tornado.web.RequestHandler):
 
     def get(self):
+        model = EntryModel()
         viewer = Viewer(
             request=self.request,
-            response=self
+            response=self,
+            model=model
         )
 
         # Store the viewer in the cache

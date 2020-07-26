@@ -4,7 +4,32 @@ $(document).ready(function(){
     initViewer(window.VIEWERID);
 });
 
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        timeout = null;
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
 function initViewer(ref) {
+
+    $('.plotly-chart').each(function(i, e){
+        Plotly.newPlot(e, $(e).data('traces'), $(e).data('layout')); 
+    });
+
+    $('.plotly-chart').on('redraw', debounce((e, value) => {
+        console.log(e);
+        const el = e.currentTarget;
+        console.log($(el).data('traces'))
+        console.log(value)
+        Plotly.newPlot(el, JSON.parse(value), $(el).data('layout')); 
+    }, 250));
+
     var ws = new WebSocket("ws://localhost:8888/websocket/?ref="+ref);
     ws.onopen = function(evt) {
         console.log("Connected!");
@@ -12,6 +37,7 @@ function initViewer(ref) {
 
     ws.onmessage = function(evt) {
         var change = JSON.parse(evt.data);
+        console.log('onmessage')
         console.log(change);
         var $tag = $('#'+change.id);
         change.object = $tag;
@@ -19,7 +45,7 @@ function initViewer(ref) {
         if (change.type === 'refresh') {
             $tag.html(change.value);
         } else if (change.type === 'trigger') {
-            $tag.trigger(change.value);
+            $tag.trigger(change.name, change.value);
         } else if (change.type === 'added') {
             $tag.append($(change.value));
         } else if (change.type === 'removed') {
@@ -52,6 +78,7 @@ function initViewer(ref) {
     };
 
     function sendEvent(change) {
+        console.log('send')
         console.log(change);
         ws.send(JSON.stringify(change));
     };
