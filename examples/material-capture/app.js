@@ -16,6 +16,8 @@ const debounce = (func, wait) => {
     };
   };
 
+const clientUpdateAck = [];
+
 function initViewer(ref) {
 
     $('.plotly-chart').each(function(i, e){
@@ -35,8 +37,23 @@ function initViewer(ref) {
         console.log("Connected!");
     };
 
+    const areEventsEqual = (e1, e2) => 
+        e1.id === e2.id && 
+        e1.type === e2.type &&
+        e1.name === e2.name && 
+        e1.value === e2.value
+
     ws.onmessage = function(evt) {
         var change = JSON.parse(evt.data);
+
+        // If i get an update which originated on the client dont
+        // apply it; this is assuming the ordering of the client updates
+        // are always replayed in sync;
+        if(change.type === 'update' && clientUpdateAck.length > 0 && areEventsEqual(change, clientUpdateAck[0])) {
+            clientUpdateAck.shift();
+            return;
+        }
+
         console.log('onmessage')
         console.log(change);
         var $tag = $('#'+change.id);
@@ -80,6 +97,9 @@ function initViewer(ref) {
     function sendEvent(change) {
         console.log('send')
         console.log(change);
+        if (change.type === 'update') {
+            clientUpdateAck.push(change);
+        }
         ws.send(JSON.stringify(change));
     };
 

@@ -18,10 +18,13 @@ class EntryModel(Atom):
 
     @observe('param1', 'param2', 'param3')
     def some_param_changed(self, change):
+        y1 = int(self.param1)
+        y2 = int(self.param2)
+        y3 = int(self.param3)
         self.result = json.dumps([
             {
                 'x': [1, 2, 3, int(change['value'])],
-                'y': [10, 15, 13, 17],
+                'y': [y1, y2, y3, 17],
                 'type': 'scatter'
             },
         ])
